@@ -1,7 +1,7 @@
-#include <linux/init.h>
 /*包含初始化宏定义的头文件,代码中的module_init和module_exit在此文件中*/
-#include <linux/module.h>
+#include <linux/init.h>
 /*包含初始化加载模块的头文件,代码中的MODULE_LICENSE在此头文件中*/
+#include <linux/module.h>
 /*定义module_param module_param_array的头文件*/
 #include <linux/moduleparam.h>
 /*定义module_param module_param_array中perm的头文件*/
@@ -12,11 +12,14 @@
 #include <linux/kdev_t.h>
 /*定义字符设备的结构体*/
 #include <linux/cdev.h>
+/*分配内存空间函数头文件*/
+#include <linux/slab.h>
 
 #define DEVICE_NAME 		"ascdev"
-#define DEVICE_MINOR_NUM 		2
-#define DEV_MAJOR 				0
-#define DEV_MINOR 				0
+#define DEVICE_MINOR_NUM	 2
+#define DEV_MAJOR			 0
+#define DEV_MINOR 		     0
+#define REGDEV_SIZE			 3000
 
 MODULE_LICENSE("Dual BSD/GPL");
 /*声明是开源的，没有内核版本限制*/
@@ -31,14 +34,52 @@ module_param(numdev_major,int,S_IRUSR);
 /*输入次设备号*/
 module_param(numdev_minor,int,S_IRUSR);
 
+struct reg_dev
+{
+	char *data;
+	unsigned long size;
+	
+	struct cdev cdev;
+};
+
+struct reg_dev *my_devices;
+
+struct file_operations my_fops = {
+	.owner 		=	 THIS_MODULE,
+};
+
+
+/*设备注册到系统*/
+static void reg_init_cdev(struct reg_dev *dev,int index)
+{
+	int err;
+	int devno = MKDEV(numdev_major,numdev_minor+index);
+	
+	/*数据初始化*/
+	//void cdev_init(struct cdev *, const struct file_operations *);
+	cdev_init(&dev->cdev,&my_fops);
+	dev->cdev.owner = THIS_MODULE;
+	dev->cdev.ops = &my_fops;
+	
+	/*注册到系统*/
+	//int cdev_add(struct cdev *, dev_t, unsigned);
+	err = cdev_add(&dev->cdev,devno,1);
+	if(err)
+	{
+		printk(KERN_EMERG "cdev_add %d is fail! %d\n",index,err);
+	}
+	else
+	{
+		printk(KERN_EMERG "cdev_add %d is success!\n",index);
+	}
+}
 
 static int __init scdev_init(void)
 {
-	int ret = 0;
+	int ret = 0,i;
 	dev_t num_dev;
 	
-	printk("%s,%d\n",__func__,__LINE__);
-
+	
 	printk(KERN_EMERG "numdev_major is %d!\n",numdev_major);
 	printk(KERN_EMERG "numdev_minor is %d!\n",numdev_minor);
 	
@@ -50,33 +91,61 @@ static int __init scdev_init(void)
 	else
 	{
 		/*动态注册设备号*/
-	
-		//int alloc_chrdev_region(dev_t *dev, unsigned baseminor, unsigned count,const char *name)
 		ret = alloc_chrdev_region(&num_dev,numdev_minor,DEVICE_MINOR_NUM,DEVICE_NAME);
 		/*获得主设备号*/
 		numdev_major = MAJOR(num_dev);
 
-		printk("%s,%d\n",__func__,__LINE__);
-
 		printk(KERN_EMERG "adev_region req %d !\n",numdev_major);
 	}
-		
+
 	if(ret < 0)
 	{
 		printk(KERN_EMERG "register_chrdev_region req %d is failed!\n",numdev_major);		
 	}
+	
+	my_devices = kmalloc(DEVICE_MINOR_NUM * sizeof(struct reg_dev),GFP_KERNEL);
+	if(!my_devices)
+	{
+		ret = -ENOMEM;
+		goto fail;
+	}
+	memset(my_devices,0,DEVICE_MINOR_NUM * sizeof(struct reg_dev));
+	
+	/*设备初始化*/
+	for(i = 0; i < DEVICE_MINOR_NUM; i++)
+	{
+		my_devices[i].data = kmalloc(REGDEV_SIZE,GFP_KERNEL);
+		memset(my_devices[i].data,0,REGDEV_SIZE);
+		/*设备注册到系统*/
+		reg_init_cdev(&my_devices[i],i);
+	}
+	
 		
 	printk(KERN_EMERG "scdev_init!\n");
 	/*打印信息，KERN_EMERG表示紧急信息*/
 	return 0;
+
+fail:
+	/*注销设备号*/
+	unregister_chrdev_region(MKDEV(numdev_major,numdev_minor),DEVICE_MINOR_NUM);
+	printk(KERN_EMERG "kmalloc is fail!\n");
+	
+	return ret;
 }
 
 static void __exit scdev_exit(void)
 {
+	int i;
 	printk(KERN_EMERG "scdev_exit!\n");
-
-	unregister_chrdev_region(MKDEV(numdev_major,numdev_minor),DEVICE_MINOR_NUM);
 	
+	/*除去字符设备*/
+	for(i = 0; i < DEVICE_MINOR_NUM; i++)
+	{
+		cdev_del(&(my_devices[i].cdev));
+	}
+		
+	unregister_chrdev_region(MKDEV(numdev_major,numdev_minor),DEVICE_MINOR_NUM);
+
 	return ;
 }
 

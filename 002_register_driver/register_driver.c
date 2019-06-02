@@ -5,7 +5,7 @@
 
 //DRIVER_NAME 需要和注册的设备名称相同
 //这样才会调用platform_match与设备进行匹配
-#define DRIVER_NAME "skyfall_ctl"
+#define DRIVER_NAME "skyfall"
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("SKYFALL");

@@ -7,7 +7,7 @@
 /*注册设备节点的文件结构体*/
 #include <linux/fs.h>
 
-#define DRIVER_NAME "skyfall_ctl"
+#define DRIVER_NAME "skyfall"
 #define DEVICE_NAME "skyfall_ctl123"
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("SKYFALL");

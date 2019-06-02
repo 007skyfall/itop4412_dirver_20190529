@@ -15,7 +15,7 @@
 /*三星平台4412平台，GPIO宏定义头文件*/
 #include <mach/gpio-exynos4.h>
 
-#define DRIVER_NAME "skyfall_ctl"
+#define DRIVER_NAME "skyfall"
 #define DEVICE_NAME "skyfall_gpio"
 
 MODULE_LICENSE("Dual BSD/GPL");

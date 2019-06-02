@@ -1,8 +1,8 @@
 src = $(wildcard *.c)
 targets = $(patsubst %.c, %, $(src))
 
-CC = gcc
-STRIP=strip
+CC = /home/mint/itop/arm-2009q3/bin/arm-none-linux-gnueabi-gcc 
+STRIP= /home/mint/itop/arm-2009q3/bin/arm-none-linux-gnueabi-strip
 CFLAGS = -Wall -g 
 
 all:$(targets)
